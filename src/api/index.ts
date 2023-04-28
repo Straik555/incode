@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 
-const token = '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'
+const token = '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'
 
 export const baseApiSlice = createApi({
 	reducerPath: 'baseApiIncodeMy',

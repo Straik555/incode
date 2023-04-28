@@ -21,11 +21,6 @@ export enum StateProps {
 	Closed = 'closed'
 }
 
-export type AssigneesProps = {
-	method: string
-	assignees: string[]
-} & RepoPropsType
-
 export type AssigneesResponse = {
 	login: string
 }

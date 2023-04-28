@@ -1,14 +1,11 @@
 import { baseApiSlice } from '../index'
 import {
 	AddLabelProps,
-	AssigneesProps,
 	ColumnsTag,
 	IssuesResponse,
-	LabelsProps,
 	RepoApiTags,
 	RepoPropsType,
 	RepoResponse,
-	StateProps,
 	UpdateClosedProps
 } from './type'
 import dayjs from 'dayjs'
@@ -52,43 +49,13 @@ const repoApi = enhancedBaseApiSlice.injectEndpoints({
 							column.taskIds.push(number as never)
 						}
 					})
-				const labels = (index: number): LabelsProps[] => {
-					const labels: LabelsProps[] = []
-					for (let i = 0; i <= index; i++) {
-						labels.push({ name: String(i) })
-					}
-					return [...labels]
-				}
+
 				response
-					// .map((res, index) => {
-					// 	console.log('index', index)
-					// 	console.log('index', !res.labels.length && labels(index))
-					// 	return !!res.labels.length ? res : { ...res, labels: labels(index) }
-					// })
-					.sort((a, b) => {
-						if (dayjs(b.updated_at).isBefore(dayjs(a.updated_at))) {
-							return -1
-							// } else if (dayjs(a.updated_at).isBefore(dayjs(b.updated_at))) {
-							// 	return -1
-						} else return 0
-					})
-					// .map((res, index) => {
-					// 	console.log('index', index)
-					// 	console.log('index', !res.labels.length && labels(index))
-					// 	return !!res.labels.length ? res : { ...res, labels: labels(index) }
-					// })
 					.sort((a, b) => {
 						if (a.labels.length > b.labels.length) {
 							return 1
-						} else if (a.labels.length < b.labels.length) {
-							return -1
-						} else {
-							if (dayjs(b.updated_at).isBefore(dayjs(a.updated_at))) {
-								return -1
-							} else {
-								return 0
-							}
 						}
+						return -1
 					})
 					.map(col => {
 						if (!!col.assignees.length) {
@@ -105,17 +72,6 @@ const repoApi = enhancedBaseApiSlice.injectEndpoints({
 				}
 			},
 			providesTags: [RepoApiTags.ISSUES]
-		}),
-		addOrDeleteAssignees: build.mutation<RepoResponse, AssigneesProps>({
-			query: ({ url, method, assignees }) => ({
-				url: url + '/assignees',
-				method,
-				body: {
-					assignees,
-					state: StateProps.Open
-				}
-			}),
-			invalidatesTags: [RepoApiTags.ISSUES]
 		}),
 		closedIssues: build.query<RepoResponse[], RepoPropsType>({
 			query: ({ url }) => ({
@@ -166,7 +122,6 @@ const repoApi = enhancedBaseApiSlice.injectEndpoints({
 
 export const {
 	useGetIssuesQuery,
-	useAddOrDeleteAssigneesMutation,
 	useClosedIssuesQuery,
 	useUpdateIssuesMutation,
 	useAddLabelMutation

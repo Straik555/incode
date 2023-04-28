@@ -1,11 +1,15 @@
 import React, { useMemo, useState } from 'react'
 import { Column } from './components'
 import { DragDropContext, DragUpdate } from 'react-beautiful-dnd'
-import { AssigneesProps, ColumnsTag, StateProps } from './api/repo/type'
+import {
+	ColumnsTag,
+	IssuesResponse,
+	StateProps,
+	UpdateClosedProps
+} from './api/repo/type'
 
 import {
 	useAddLabelMutation,
-	useAddOrDeleteAssigneesMutation,
 	useClosedIssuesQuery,
 	useGetIssuesQuery,
 	useUpdateIssuesMutation
@@ -32,8 +36,6 @@ function App() {
 		}
 	)
 
-	const [addOrDeleteAssignees, { isLoading: isLoadingAssignees }] =
-		useAddOrDeleteAssigneesMutation()
 	const [updateIssues, { isLoading: isLoadingUpdateIssues }] =
 		useUpdateIssuesMutation()
 	const [addLabelClosed, { isLoading: isLoadingLabelClosed }] =
@@ -47,13 +49,11 @@ function App() {
 		() =>
 			isLoadingIssues ||
 			isLoadingClosed ||
-			isLoadingAssignees ||
 			isLoadingLabelClosed ||
 			isLoadingUpdateIssues,
 		[
 			isLoadingIssues,
 			isLoadingClosed,
-			isLoadingAssignees,
 			isLoadingLabelClosed,
 			isLoadingUpdateIssues
 		]
@@ -83,49 +83,46 @@ function App() {
 		const [removed] = startTaskIds.splice(source.index, 1)
 		const repo = dataIssues.tasks.filter(task => task.number === removed)[0]
 
-		const bodyAssignees = ({
+		const update = ({
 			assignees,
-			method
-		}: Omit<AssigneesProps, 'url'>) => ({
-			url: url.slice(19) + '/issues/' + repo.number,
-			method,
-			assignees
-		})
-
-		const update = () => {
+			tasks,
+			state,
+			repo
+		}: { repo: number } & Pick<IssuesResponse, 'tasks'> &
+			Pick<UpdateClosedProps, 'assignees' | 'state'>) => {
 			updateIssues({
-				url: `${url.slice(19)}/issues/${repo.number}`,
-				state: StateProps.Open,
-				assignees: [],
+				url: `${url.slice(19)}/issues/${repo}`,
+				state,
+				assignees,
 				labels: labels(destination?.index)
 			})
-			dataIssues.tasks
+			tasks
 				.slice(destination.index)
-				.filter(data => data !== dataIssues.tasks[source.index])
+				.filter(data => data !== tasks[source.index])
 				.map((data, index) =>
 					updateIssues({
 						url: `${url.slice(19)}/issues/${data.number}`,
 						labels: labels(destination?.index + index + 1),
-						state: StateProps.Open,
-						assignees: []
+						state,
+						assignees
 					})
 				)
 		}
 
 		if (!!dataClosed && source.droppableId === ColumnsTag.Third) {
 			if (destination.droppableId === ColumnsTag.First) {
-				return updateIssues({
-					url: `${url.slice(19)}/issues/${dataClosed[source.index].number}`,
+				return update({
+					repo: dataClosed[source.index].number,
 					state: StateProps.Open,
-					assignees: [],
-					labels: labels(destination?.index)
+					tasks: dataClosed.filter(el => !el.assignees.length),
+					assignees: []
 				})
 			} else if (destination.droppableId === ColumnsTag.Second) {
-				return updateIssues({
-					url: `${url.slice(19)}/issues/${dataClosed[source.index].number}`,
+				return update({
+					repo: dataClosed[source.index].number,
 					state: StateProps.Open,
-					assignees: [dataClosed[source.index].user.login],
-					labels: labels(destination?.index)
+					tasks: dataClosed.filter(el => !!el.assignees.length),
+					assignees: [dataClosed[source.index].user.login]
 				})
 			} else {
 				addLabelClosed({
@@ -153,14 +150,19 @@ function App() {
 					labels: labels(destination?.index)
 				})
 			} else if (destination.droppableId === ColumnsTag.First) {
-				return addOrDeleteAssignees(
-					bodyAssignees({
-						assignees: [repo.assignees[0].login],
-						method: 'DELETE'
-					})
-				)
+				update({
+					assignees: [],
+					tasks: dataIssues.tasks.filter(el => !el.assignees.length),
+					state: StateProps.Open,
+					repo: repo.number
+				})
 			} else {
-				update()
+				update({
+					assignees: [repo.user.login],
+					tasks: dataIssues.tasks.filter(el => !!el.assignees.length),
+					state: StateProps.Open,
+					repo: repo.number
+				})
 			}
 		} else {
 			if (destination.droppableId === ColumnsTag.Third) {
@@ -171,14 +173,19 @@ function App() {
 					labels: labels(destination?.index)
 				})
 			} else if (destination.droppableId === ColumnsTag.Second) {
-				return addOrDeleteAssignees(
-					bodyAssignees({
-						assignees: [repo.user.login],
-						method: 'POST'
-					})
-				)
+				update({
+					assignees: [repo.user.login],
+					tasks: dataIssues.tasks.filter(el => !!el.assignees.length),
+					state: StateProps.Open,
+					repo: repo.number
+				})
 			} else {
-				update()
+				update({
+					assignees: [],
+					tasks: dataIssues.tasks.filter(el => !el.assignees.length),
+					state: StateProps.Open,
+					repo: repo.number
+				})
 			}
 		}
 	}
